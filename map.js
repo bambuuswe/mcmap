@@ -52,7 +52,7 @@ function speak(text) {
 // Spelar-ikon
 const playerIcon = L.divIcon({
   className: 'player-marker',
-  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;">',
+  html: '<img src="car.png" id="player-img" style="width:32px;height:32px;transform-origin:center;">',
   iconSize: [32, 32],
   iconAnchor: [16, 16]
 });
