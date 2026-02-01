@@ -20,6 +20,7 @@ let isLocked = false;
 let isCompassLocked = false;
 let routeInstructions = [];
 let currentStepIndex = 0;
+let searchTimeout = null;
 
 // UI
 const els = {
@@ -32,7 +33,10 @@ const els = {
   lockBtn: document.getElementById('lock-btn'),
   compassBtn: document.getElementById('compass-btn'),
   turnIcon: document.getElementById('turn-icon'),
-  map: document.getElementById('map')
+  map: document.getElementById('map'),
+  searchInput: document.getElementById('search-input'),
+  searchBtn: document.getElementById('search-btn'),
+  searchResults: document.getElementById('search-results')
 };
 
 // TTS
@@ -93,27 +97,15 @@ function enableOrientation() {
   });
 }
 
-// FIXAD ROTATION - spelaren roterar alltid med mobilen!
 function updateRotation() {
   const img = document.getElementById('player-img');
   
   if (isCompassLocked) {
-    // KARTAN ROTERAR så att "upp" = den riktning du går
     els.map.style.transform = `translate(-50%, -50%) rotate(${-currentHeading}deg)`;
-    
-    // VIKTIGT: Spelaren roterar med mobilen även när kartan roterar!
-    // Eftersom kartan roterar -heading, måste spelaren rotera +heading
-    // för att peka åt rätt håll på skärmen
     if (img) img.style.transform = `rotate(${currentHeading}deg)`;
-    
-    // Turn-ikonen visar också din riktning
     els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
-    
   } else {
-    // KARTAN ÄR STILL (norr alltid uppåt)
     els.map.style.transform = `translate(-50%, -50%) rotate(0deg)`;
-    
-    // Spelaren roterar normalt med mobilen
     if (img) img.style.transform = `rotate(${currentHeading}deg)`;
     els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
   }
@@ -123,7 +115,110 @@ document.addEventListener('click', () => {
   if (!deviceOrientationEnabled) requestOrientation();
 }, { once: true });
 
-// Översätt instruktioner till svenska
+// SÖKFUNKTION!
+async function searchAddress(query) {
+  if (!query || query.length < 3) return;
+  
+  try {
+    // Använd OpenStreetMap Nominatim (gratis)
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=5&countrycodes=se`
+    );
+    const data = await response.json();
+    displaySearchResults(data);
+  } catch (error) {
+    console.error('Sökfel:', error);
+    speak("Kunde inte söka");
+  }
+}
+
+function displaySearchResults(results) {
+  els.searchResults.innerHTML = '';
+  
+  if (results.length === 0) {
+    els.searchResults.innerHTML = '<div class="search-result-item">Inga resultat</div>';
+    els.searchResults.classList.add('active');
+    return;
+  }
+  
+  results.forEach(result => {
+    const div = document.createElement('div');
+    div.className = 'search-result-item';
+    div.textContent = result.display_name.split(',').slice(0, 3).join(', '); // Kortare namn
+    div.addEventListener('click', () => {
+      selectSearchResult(result);
+    });
+    els.searchResults.appendChild(div);
+  });
+  
+  els.searchResults.classList.add('active');
+}
+
+function selectSearchResult(result) {
+  const lat = parseFloat(result.lat);
+  const lon = parseFloat(result.lon);
+  
+  // Stäng sökresultat
+  els.searchResults.classList.remove('active');
+  els.searchInput.value = result.display_name.split(',')[0];
+  
+  // Sätt som destination
+  if (destinationMarker) map.removeLayer(destinationMarker);
+  if (routingControl) map.removeControl(routingControl);
+  
+  // Pan till platsen
+  map.setView([lat, lon], 16);
+  
+  destinationMarker = L.marker([lat, lon], {
+    icon: L.divIcon({
+      className: 'destination-marker',
+      html: '<div style="width:16px;height:16px;background:#ff4444;border:2px solid #000;"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    })
+  }).addTo(map);
+  
+  // Om vi har GPS, beräkna rutt
+  if (currentPos[0] !== 0) {
+    calculateRoute(currentPos, [lat, lon]);
+    speak(`Navigerar till ${result.display_name.split(',')[0]}`);
+  } else {
+    speak(`Valde ${result.display_name.split(',')[0]}. Väntar på GPS.`);
+  }
+}
+
+// Sök-event
+els.searchInput.addEventListener('input', (e) => {
+  clearTimeout(searchTimeout);
+  const query = e.target.value;
+  
+  if (query.length >= 3) {
+    searchTimeout = setTimeout(() => {
+      searchAddress(query);
+    }, 500); // Vänta 500ms efter att användaren slutat skriva
+  } else {
+    els.searchResults.classList.remove('active');
+  }
+});
+
+els.searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    searchAddress(els.searchInput.value);
+  }
+});
+
+els.searchBtn.addEventListener('click', () => {
+  searchAddress(els.searchInput.value);
+});
+
+// Stäng sökresultat när man klickar utanför
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.mc-search-container')) {
+    els.searchResults.classList.remove('active');
+  }
+});
+
+// Översätt instruktioner
 function translateInstruction(text) {
   const translations = {
     'Head': 'Kör rakt fram',
@@ -166,7 +261,6 @@ function translateInstruction(text) {
   return translated;
 }
 
-// Pil-emoji för instruktion
 function getTurnIcon(text) {
   text = text.toLowerCase();
   if (text.includes('left')) return '⬅️';
@@ -176,7 +270,6 @@ function getTurnIcon(text) {
   return '⬆️';
 }
 
-// Uppdatera instruktion baserat på position
 function updateCurrentInstruction() {
   if (!routeInstructions.length || currentPos[0] === 0) return;
   
@@ -314,7 +407,7 @@ document.getElementById('share-btn').addEventListener('click', () => {
   }
 });
 
-// Sätt mål
+// Sätt mål via klick (om upplåst)
 map.on('click', (e) => {
   if (isLocked) {
     els.lockBtn.style.animation = 'shake 0.3s';
