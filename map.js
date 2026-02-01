@@ -5,41 +5,54 @@ const map = L.map("map", {
   maxZoom: 20
 }).setView([0, 0], 17);
 
-// Minecraft-terräng karta
-L.tileLayer(
-  "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
-  { maxZoom: 17 }
-).addTo(map);
+L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+  maxZoom: 17
+}).addTo(map);
 
 // State
 let currentPos = [0, 0];
-let currentHeading = 0;
-let isLocked = false;
 let destinationMarker = null;
 let routingControl = null;
+let lastInstruction = "";
+let ttsEnabled = true;
 
-// UI refs
+// UI
 const els = {
   instruction: document.getElementById('instruction'),
   street: document.getElementById('street'),
   etaTime: document.getElementById('eta-time'),
   etaMin: document.getElementById('eta-min'),
   etaKm: document.getElementById('eta-km'),
-  lockBtn: document.getElementById('lock-btn'),
-  arrow: document.getElementById('turn-arrow')
+  soundBtn: document.getElementById('sound-btn')
 };
 
-// Player icon med rotation
+// TTS Funktion
+function speak(text) {
+  if (!ttsEnabled || !text || text === lastInstruction) return;
+  
+  // Stoppa tidigare
+  window.speechSynthesis.cancel();
+  
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'sv-SE';
+  utterance.rate = 1.0;
+  utterance.pitch = 1.0;
+  
+  window.speechSynthesis.speak(utterance);
+  lastInstruction = text;
+}
+
+// Spelar-ikon
 const playerIcon = L.divIcon({
   className: 'player-marker',
-  html: '<img src="player.png" id="player-img" style="width:36px;height:36px;image-rendering:pixelated;transform-origin:center;">',
-  iconSize: [36, 36],
-  iconAnchor: [18, 18]
+  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;">',
+  iconSize: [32, 32],
+  iconAnchor: [16, 16]
 });
 
 const player = L.marker([0, 0], { icon: playerIcon, zIndexOffset: 1000 }).addTo(map);
 
-// Compass
+// Kompass
 async function requestOrientation() {
   if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
     try {
@@ -55,7 +68,6 @@ function enableOrientation() {
   window.addEventListener('deviceorientation', (e) => {
     let heading = e.webkitCompassHeading || (360 - e.alpha);
     if (heading !== null) {
-      currentHeading = heading;
       const img = document.getElementById('player-img');
       if (img) img.style.transform = `rotate(${heading}deg)`;
     }
@@ -64,29 +76,31 @@ function enableOrientation() {
 
 document.addEventListener('click', requestOrientation, { once: true });
 
-// Lock button
-els.lockBtn.addEventListener('click', () => {
-  isLocked = !isLocked;
-  els.lockBtn.classList.toggle('locked');
-  els.lockBtn.textContent = isLocked ? '🔒' : '🔓';
-  if (isLocked && currentPos[0] !== 0) {
-    map.setView(currentPos, 17);
+// KNAPPAR
+els.soundBtn.addEventListener('click', () => {
+  ttsEnabled = !ttsEnabled;
+  els.soundBtn.textContent = ttsEnabled ? '🔊' : '🔇';
+  els.soundBtn.classList.toggle('muted', !ttsEnabled);
+  
+  if (!ttsEnabled) {
+    window.speechSynthesis.cancel();
+  } else {
+    speak("Ljud på");
   }
 });
 
-// Side buttons
-let soundEnabled = true;
-document.getElementById('sound-btn').addEventListener('click', function() {
-  soundEnabled = !soundEnabled;
-  this.textContent = soundEnabled ? '🔊' : '🔇';
-  this.style.opacity = soundEnabled ? '1' : '0.6';
-});
-
-document.getElementById('overview-btn').addEventListener('click', () => {
-  if (destinationMarker) {
-    const bounds = L.latLngBounds([currentPos], [destinationMarker.getLatLng()]);
-    map.fitBounds(bounds, {padding: [50, 50]});
-  }
+document.getElementById('layers-btn').addEventListener('click', () => {
+  // Växla kartlager
+  map.eachLayer((layer) => {
+    if (layer instanceof L.TileLayer) map.removeLayer(layer);
+  });
+  
+  const isTopo = map.hasLayer(L.tileLayer());
+  L.tileLayer(isTopo ? 
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" :
+    "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
+    { maxZoom: 19 }
+  ).addTo(map);
 });
 
 document.getElementById('cancel-btn').addEventListener('click', () => {
@@ -99,45 +113,39 @@ document.getElementById('cancel-btn').addEventListener('click', () => {
     routingControl = null;
   }
   els.instruction.textContent = "Navigering avbruten";
-  els.street.textContent = "Klicka på kartan för mål";
+  els.street.textContent = "Klicka för nytt mål";
   els.etaTime.textContent = "--:--";
   els.etaMin.textContent = "--";
   els.etaKm.textContent = "--";
+  window.speechSynthesis.cancel();
 });
 
-// Share
 document.getElementById('share-btn').addEventListener('click', () => {
   const time = els.etaTime.textContent;
   if (time !== '--:--') {
+    const text = `Jag ankommer ${time} med Minecraft Map!`;
     if (navigator.share) {
-      navigator.share({ text: `Jag ankommer ${time} med Minecraft Map!` });
+      navigator.share({ text });
     } else {
-      alert(`Ankomst: ${time}`);
+      alert(text);
     }
   }
 });
 
-// Set destination
+// Sätt mål
 map.on('click', (e) => {
-  if (isLocked) {
-    els.lockBtn.style.animation = 'shake 0.5s';
-    setTimeout(() => els.lockBtn.style.animation = '', 500);
-    return;
-  }
-  
   const lat = e.latlng.lat;
   const lng = e.latlng.lng;
   
   if (destinationMarker) map.removeLayer(destinationMarker);
   if (routingControl) map.removeControl(routingControl);
   
-  // Röd pixel-marker (Minecraft style)
   destinationMarker = L.marker([lat, lng], {
     icon: L.divIcon({
       className: 'destination-marker',
-      html: '<div style="width:20px;height:20px;background:#ff4444;border:3px solid #000;box-shadow:2px 2px 0 rgba(0,0,0,0.5);"></div>',
-      iconSize: [20, 20],
-      iconAnchor: [10, 10]
+      html: '<div style="width:16px;height:16px;background:#ff4444;border:2px solid #000;"></div>',
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
     })
   }).addTo(map);
   
@@ -145,6 +153,7 @@ map.on('click', (e) => {
     calculateRoute(currentPos, [lat, lng]);
   } else {
     els.instruction.textContent = "Väntar på GPS...";
+    speak("Väntar på GPS-signal");
   }
 });
 
@@ -156,13 +165,7 @@ function calculateRoute(from, to) {
     routeWhileDragging: false,
     show: false,
     lineOptions: {
-      styles: [{
-        color: '#4caf50',
-        weight: 8,
-        opacity: 1,
-        dashArray: '10, 5',
-        lineCap: 'square'
-      }]
+      styles: [{ color: '#4caf50', weight: 6, dashArray: '8, 4' }]
     },
     createMarker: () => null
   }).addTo(map);
@@ -171,22 +174,22 @@ function calculateRoute(from, to) {
     const route = e.routes[0];
     const summary = route.summary;
     
-    // Update UI
+    // Uppdatera UI
     const now = new Date();
     const arrival = new Date(now.getTime() + summary.totalTime * 1000);
     els.etaTime.textContent = arrival.toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
     els.etaMin.textContent = Math.round(summary.totalTime / 60);
     els.etaKm.textContent = (summary.totalDistance / 1000).toFixed(1);
     
-    // Turn instruction (simulated)
-    els.instruction.textContent = "Sväng höger om 150m";
-    els.street.textContent = "Mot skogsstigen";
-    els.arrow.textContent = "➡️";
+    // Vägbeskrivning (förenklad)
+    const instruction = "Sväng höger om 100 meter";
+    const street = "Mot destinationen";
     
-    if (soundEnabled) {
-      // Vibration för feedback
-      if (navigator.vibrate) navigator.vibrate(50);
-    }
+    els.instruction.textContent = instruction;
+    els.street.textContent = street;
+    
+    // Läs upp!
+    speak(`${instruction}. ${Math.round(summary.totalTime / 60)} minuter kvar.`);
   });
 }
 
@@ -196,13 +199,9 @@ navigator.geolocation.watchPosition(
     const lat = pos.coords.latitude;
     const lon = pos.coords.longitude;
     currentPos = [lat, lon];
-    
     player.setLatLng([lat, lon]);
     
-    if (isLocked) {
-      map.setView([lat, lon], 17);
-    }
-    
+    // Uppdatera route om aktiv
     if (destinationMarker && routingControl) {
       const dest = destinationMarker.getLatLng();
       calculateRoute([lat, lon], [dest.lat, dest.lng]);
@@ -211,14 +210,3 @@ navigator.geolocation.watchPosition(
   (err) => console.error(err),
   { enableHighAccuracy: true, maximumAge: 3000 }
 );
-
-// Add shake animation
-const style = document.createElement('style');
-style.textContent = `
-  @keyframes shake {
-    0%, 100% { transform: translateY(0); }
-    25% { transform: translateY(-5px); }
-    75% { transform: translateY(5px); }
-  }
-`;
-document.head.appendChild(style);
