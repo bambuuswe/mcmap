@@ -18,8 +18,8 @@ let lastInstruction = "";
 let ttsEnabled = true;
 let isLocked = false;
 let isCompassLocked = false;
-let routeInstructions = []; // Array med alla instruktioner
-let currentStepIndex = 0;   // Vilken instruktion vi är på
+let routeInstructions = [];
+let currentStepIndex = 0;
 
 // UI
 const els = {
@@ -93,14 +93,27 @@ function enableOrientation() {
   });
 }
 
+// FIXAD ROTATION - spelaren roterar alltid med mobilen!
 function updateRotation() {
   const img = document.getElementById('player-img');
+  
   if (isCompassLocked) {
+    // KARTAN ROTERAR så att "upp" = den riktning du går
     els.map.style.transform = `translate(-50%, -50%) rotate(${-currentHeading}deg)`;
-    if (img) img.style.transform = `rotate(0deg)`;
-    els.turnIcon.style.transform = `rotate(0deg)`;
+    
+    // VIKTIGT: Spelaren roterar med mobilen även när kartan roterar!
+    // Eftersom kartan roterar -heading, måste spelaren rotera +heading
+    // för att peka åt rätt håll på skärmen
+    if (img) img.style.transform = `rotate(${currentHeading}deg)`;
+    
+    // Turn-ikonen visar också din riktning
+    els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
+    
   } else {
+    // KARTAN ÄR STILL (norr alltid uppåt)
     els.map.style.transform = `translate(-50%, -50%) rotate(0deg)`;
+    
+    // Spelaren roterar normalt med mobilen
     if (img) img.style.transform = `rotate(${currentHeading}deg)`;
     els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
   }
@@ -110,7 +123,7 @@ document.addEventListener('click', () => {
   if (!deviceOrientationEnabled) requestOrientation();
 }, { once: true });
 
-// HJÄLPFUNKTION: Översätt instruktioner till svenska
+// Översätt instruktioner till svenska
 function translateInstruction(text) {
   const translations = {
     'Head': 'Kör rakt fram',
@@ -153,7 +166,7 @@ function translateInstruction(text) {
   return translated;
 }
 
-// HJÄLPFUNKTION: Få pil-emoji för instruktion
+// Pil-emoji för instruktion
 function getTurnIcon(text) {
   text = text.toLowerCase();
   if (text.includes('left')) return '⬅️';
@@ -163,27 +176,13 @@ function getTurnIcon(text) {
   return '⬆️';
 }
 
-// UPPDATERAD: Beräkna avstånd till nästa sväng
-function getDistanceToStep(step, currentPos) {
-  if (!step || !currentPos) return null;
-  
-  // Om step har en latLng, beräkna avstånd dit
-  if (step.latLng) {
-    const stepLatLng = L.latLng(step.latLng.lat, step.latLng.lng);
-    const current = L.latLng(currentPos[0], currentPos[1]);
-    return stepLatLng.distanceTo(current); // meter
-  }
-  return null;
-}
-
-// UPPDATERAD: Hitta vilken instruktion vi är på
+// Uppdatera instruktion baserat på position
 function updateCurrentInstruction() {
   if (!routeInstructions.length || currentPos[0] === 0) return;
   
   let closestIndex = 0;
   let minDistance = Infinity;
   
-  // Hitta närmaste instruktion
   for (let i = 0; i < routeInstructions.length; i++) {
     const dist = getDistanceToStep(routeInstructions[i], currentPos);
     if (dist !== null && dist < minDistance) {
@@ -192,12 +191,10 @@ function updateCurrentInstruction() {
     }
   }
   
-  // Om vi är närmare än 50m på en instruktion, gå till nästa
   if (minDistance < 50 && closestIndex < routeInstructions.length - 1) {
     closestIndex++;
   }
   
-  // Om vi bytt instruktion, uppdatera UI och TTS
   if (closestIndex !== currentStepIndex) {
     currentStepIndex = closestIndex;
     const instruction = routeInstructions[currentStepIndex];
@@ -206,23 +203,31 @@ function updateCurrentInstruction() {
       const text = translateInstruction(instruction.text);
       const distance = instruction.distance ? Math.round(instruction.distance) : 0;
       
-      els.instruction.textContent = `${text}`;
+      els.instruction.textContent = text;
       els.street.textContent = distance > 0 ? `om ${distance} meter` : 'nu';
       els.turnIcon.textContent = getTurnIcon(instruction.text);
       
-      // TTS bara om det är en ny instruktion
       if (lastInstruction !== text) {
         speak(`${text} om ${distance} meter`);
       }
     }
   } else if (routeInstructions[currentStepIndex]) {
-    // Uppdatera bara avståndet
     const instruction = routeInstructions[currentStepIndex];
     const dist = getDistanceToStep(instruction, currentPos);
     if (dist !== null) {
       els.street.textContent = dist > 100 ? `om ${Math.round(dist)} meter` : 'nu';
     }
   }
+}
+
+function getDistanceToStep(step, currentPos) {
+  if (!step || !currentPos) return null;
+  if (step.latLng) {
+    const stepLatLng = L.latLng(step.latLng.lat, step.latLng.lng);
+    const current = L.latLng(currentPos[0], currentPos[1]);
+    return stepLatLng.distanceTo(current);
+  }
+  return null;
 }
 
 // KNAPPAR
@@ -341,7 +346,6 @@ map.on('click', (e) => {
 function calculateRoute(from, to) {
   if (routingControl) map.removeControl(routingControl);
   
-  // Nollställ
   routeInstructions = [];
   currentStepIndex = 0;
   
@@ -359,7 +363,6 @@ function calculateRoute(from, to) {
     const route = e.routes[0];
     const summary = route.summary;
     
-    // Spara instruktioner
     if (route.instructions && route.instructions.length) {
       routeInstructions = route.instructions.map((inst, index) => ({
         text: inst.text,
@@ -367,7 +370,6 @@ function calculateRoute(from, to) {
         latLng: route.coordinates[inst.index] || null
       }));
     } else {
-      // Om inga instruktioner finns, skapa enkel lista
       routeInstructions = [{
         text: 'Kör mot destinationen',
         distance: summary.totalDistance,
@@ -375,17 +377,14 @@ function calculateRoute(from, to) {
       }];
     }
     
-    // Uppdatera ETA
     const now = new Date();
     const arrival = new Date(now.getTime() + summary.totalTime * 1000);
     els.etaTime.textContent = arrival.toLocaleTimeString('sv-SE', {hour: '2-digit', minute: '2-digit'});
     els.etaMin.textContent = Math.round(summary.totalTime / 60);
     els.etaKm.textContent = (summary.totalDistance / 1000).toFixed(1);
     
-    // Visa första instruktionen
     updateCurrentInstruction();
     
-    // Säg första instruktionen
     if (routeInstructions[0]) {
       const text = translateInstruction(routeInstructions[0].text);
       const dist = Math.round(routeInstructions[0].distance);
@@ -394,7 +393,7 @@ function calculateRoute(from, to) {
   });
 }
 
-// GPS - uppdateras kontinuerligt
+// GPS
 navigator.geolocation.watchPosition(
   (pos) => {
     const lat = pos.coords.latitude;
@@ -402,7 +401,6 @@ navigator.geolocation.watchPosition(
     currentPos = [lat, lon];
     player.setLatLng([lat, lon]);
     
-    // Uppdatera instruktion baserat på position!
     if (routeInstructions.length > 0) {
       updateCurrentInstruction();
     }
@@ -413,7 +411,6 @@ navigator.geolocation.watchPosition(
     
     if (destinationMarker && routingControl) {
       const dest = destinationMarker.getLatLng();
-      // Uppdatera bara om vi flyttat oss mycket (>10m)
       const dist = L.latLng(lat, lon).distanceTo(dest);
       if (dist > 10) {
         calculateRoute([lat, lon], [dest.lat, dest.lng]);
