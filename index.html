@@ -2,66 +2,49 @@
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
-  <title>Minecraft Navigator</title>
+  <title>Minecraft Map</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- TOP HEADER - Minecraft style -->
-  <div class="mc-header">
-    <div class="mc-header-inner">
-      <div class="turn-box">
-        <span id="turn-arrow">➡️</span>
-      </div>
-      <div class="header-text">
-        <h1 id="instruction">Börja på Norrga Kvarn</h1>
-        <p id="street">Sök efter destination</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- MAP -->
   <div id="map"></div>
 
-  <!-- SIDE BUTTONS - Minecraft blocks -->
-  <div class="mc-side-panel">
-    <button class="mc-btn" id="overview-btn" title="Översikt">
-      🗺️
-    </button>
-    <button class="mc-btn" id="sound-btn" title="Ljud">
-      🔊
-    </button>
-    <button class="mc-btn" id="cancel-btn" title="Avbryt">
-      ❌
-    </button>
+  <!-- KOMPAKT HEADER -->
+  <div class="mc-header-compact">
+    <div class="turn-icon">➡️</div>
+    <div class="header-text">
+      <h1 id="instruction">Börja på Norrga Kvarn</h1>
+      <p id="street">Sök efter destination</p>
+    </div>
   </div>
 
-  <!-- LOCK BUTTON -->
-  <button id="lock-btn" class="mc-lock-btn">🔓</button>
+  <!-- SIDOKNAPPAR (mindre) -->
+  <div class="mc-side-compact">
+    <button class="mc-side-btn" id="layers-btn" title="Kartlager">🗺️</button>
+    <button class="mc-side-btn" id="sound-btn" title="Ljud på/av">🔊</button>
+    <button class="mc-side-btn" id="cancel-btn" title="Avbryt">❌</button>
+  </div>
 
-  <!-- BOTTOM SHEET - Minecraft inventory style -->
-  <div class="mc-bottom">
-    <div class="mc-inventory">
-      <div class="mc-slot">
-        <div class="mc-time" id="eta-time">--:--</div>
-        <div class="mc-label">ANKOMST</div>
+  <!-- KOMPAKT BOTTOM -->
+  <div class="mc-bottom-compact">
+    <div class="mc-stats">
+      <div class="stat-box">
+        <span id="eta-time">--:--</span>
+        <small>ANK</small>
       </div>
-      <div class="mc-slot">
-        <div class="mc-value" id="eta-min">--</div>
-        <div class="mc-label">MIN</div>
+      <div class="stat-box">
+        <span id="eta-min">--</span>
+        <small>MIN</small>
       </div>
-      <div class="mc-slot">
-        <div class="mc-value" id="eta-km">--</div>
-        <div class="mc-label">KM</div>
+      <div class="stat-box">
+        <span id="eta-km">--</span>
+        <small>KM</small>
       </div>
     </div>
-    <button class="mc-share-btn" id="share-btn">
-      💬 DELA BERÄKNAD ANKOMST
-    </button>
+    <button class="mc-share-compact" id="share-btn">💬 DELA</button>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
