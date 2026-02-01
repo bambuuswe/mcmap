@@ -1,8 +1,8 @@
 const map = L.map("map", {
   zoomControl: false,
   attributionControl: false,
-  minZoom: 17,
-  maxZoom: 17
+  minZoom: 1,
+  maxZoom: 20
 }).setView([0, 0], 17);
 
 // PLATT karta som pixeliseras snyggt
