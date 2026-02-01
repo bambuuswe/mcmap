@@ -2,8 +2,10 @@ const map = L.map("map", {
   zoomControl: false,
   attributionControl: false,
   minZoom: 1,
-  maxZoom: 20
-}).setView([0, 0], 17);
+  maxZoom: 20,
+  // Viktigt: sätt zoom så kartan täcker hela skärmen även vid rotation
+  zoomSnap: 0.5
+}).setView([0, 0], 16); // Lite lägre zoom för att täcka mer yta
 
 L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
   maxZoom: 17
@@ -52,7 +54,7 @@ const playerIcon = L.divIcon({
 
 const player = L.marker([0, 0], { icon: playerIcon, zIndexOffset: 1000 }).addTo(map);
 
-// KOMPASS / ROTATION - VIKTIGT!
+// KOMPASS / ROTATION
 let currentHeading = 0;
 let deviceOrientationEnabled = false;
 
@@ -79,19 +81,15 @@ function enableOrientation() {
   deviceOrientationEnabled = true;
   
   window.addEventListener('deviceorientation', (e) => {
-    // iOS använder webkitCompassHeading, Android använder alpha
     let heading = null;
     
     if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
-      // iOS
       heading = e.webkitCompassHeading;
     } else if (e.alpha !== null) {
-      // Android - konvertera alpha till kompassriktning
       heading = 360 - e.alpha;
     }
     
     if (heading !== null && !isNaN(heading)) {
-      // Normalisera till 0-360
       currentHeading = (heading + 360) % 360;
       updateRotation();
     }
@@ -102,62 +100,46 @@ function updateRotation() {
   const img = document.getElementById('player-img');
   
   if (isCompassLocked) {
-    // KARTAN ROTERAR - använd CSS transform på kart-containern
-    // Rotera kartan så att norr pekar uppåt (heading = uppåt)
-    els.map.style.transform = `rotate(${-currentHeading}deg)`;
+    // KARTAN ROTERAR - rotera hela kart-containern
+    // Använd -currentHeading så att "upp" blir den riktning vi pekar
+    els.map.style.transform = `translate(-50%, -50%) rotate(${-currentHeading}deg)`;
     
-    // Spelaren pekar alltid uppåt (rakt upp på skärmen)
+    // Spelaren pekar alltid uppåt på skärmen
     if (img) img.style.transform = `rotate(0deg)`;
-    
-    // Turn-ikonen pekar också uppåt
     els.turnIcon.style.transform = `rotate(0deg)`;
     
-    // Markörer måste roteras motriktat för att peka rätt
-    document.querySelectorAll('.destination-marker').forEach(marker => {
-      marker.style.transform = `rotate(${currentHeading}deg)`;
-    });
-    
   } else {
-    // KARTAN ÄR STILL - vanligt läge
-    els.map.style.transform = `rotate(0deg)`;
+    // KARTAN ÄR STILL
+    els.map.style.transform = `translate(-50%, -50%) rotate(0deg)`;
     
     // Spelaren roterar med mobilen
     if (img) img.style.transform = `rotate(${currentHeading}deg)`;
-    
-    // Turn-ikonen roterar också
     els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
-    
-    // Återställ markörer
-    document.querySelectorAll('.destination-marker').forEach(marker => {
-      marker.style.transform = `rotate(0deg)`;
-    });
   }
 }
 
-// Klicka för att aktivera orientation (krävs på iOS)
 document.addEventListener('click', () => {
   if (!deviceOrientationEnabled) {
     requestOrientation();
   }
 }, { once: true });
 
-// LÅSKNAPP (följa spelarens position)
+// LÅSKNAPP
 els.lockBtn.addEventListener('click', () => {
   isLocked = !isLocked;
   els.lockBtn.textContent = isLocked ? '🔒' : '🔓';
   els.lockBtn.classList.toggle('locked', isLocked);
   
   if (isLocked && currentPos[0] !== 0) {
-    map.setView(currentPos, 17);
+    map.setView(currentPos, 16);
     speak("Kartan låst på position");
   } else {
     speak("Kartan upplåst");
   }
 });
 
-// KOMPASSKNAPP (lås rotation)
+// KOMPASSKNAPP
 els.compassBtn.addEventListener('click', async () => {
-  // Se till att orientation är aktiverad först
   if (!deviceOrientationEnabled) {
     const granted = await requestOrientation();
     if (!granted) {
@@ -175,8 +157,6 @@ els.compassBtn.addEventListener('click', async () => {
   } else {
     speak("Kompass upplåst.");
     els.map.classList.remove('rotating');
-    // Återställ rotation
-    els.map.style.transform = `rotate(0deg)`;
   }
   
   updateRotation();
@@ -300,7 +280,7 @@ navigator.geolocation.watchPosition(
     player.setLatLng([lat, lon]);
     
     if (isLocked) {
-      map.setView([lat, lon], 17);
+      map.setView([lat, lon], 16);
     }
     
     if (destinationMarker && routingControl) {
