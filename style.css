@@ -3,14 +3,13 @@
   padding: 0;
   box-sizing: border-box;
   image-rendering: pixelated;
-  image-rendering: crisp-edges;
 }
 
 html, body {
   font-family: 'VT323', monospace;
   height: 100%;
   overflow: hidden;
-  background: #1a1a1a;
+  background: #000;
 }
 
 #map {
@@ -22,224 +21,180 @@ html, body {
   z-index: 1;
 }
 
-/* Minecraft block filter på kartan */
+/* Pixel-filter på kartan */
 .leaflet-tile {
   image-rendering: pixelated !important;
-  image-rendering: crisp-edges !important;
   transform: scale(1.2);
-  filter: 
-    contrast(1.6) 
-    saturate(1.4) 
-    brightness(0.9)
-    sepia(0.2)
-    hue-rotate(-10deg);
+  filter: contrast(1.4) saturate(1.1) brightness(0.95);
 }
 
-/* TOP HEADER - Minecraft dirt block stil */
-.mc-header {
+.leaflet-container {
+  background: #3d5c26 !important;
+}
+
+.leaflet-control-container {
+  display: none !important;
+}
+
+/* KOMPAKT HEADER */
+.mc-header-compact {
   position: fixed;
-  top: 10px;
-  left: 10px;
-  right: 10px;
+  top: 8px;
+  left: 8px;
+  right: 70px;
   z-index: 1000;
   background: #5d8c3a;
-  border: 4px solid #3d5c26;
-  box-shadow: 
-    0 6px 0 #2d5016,
-    0 8px 10px rgba(0,0,0,0.5);
-  padding: 15px;
-}
-
-.mc-header-inner {
+  border: 3px solid #3d5c26;
+  border-bottom: 3px solid #2d5016;
+  box-shadow: 0 4px 0 #1a1a1a;
+  padding: 8px 12px;
   display: flex;
   align-items: center;
-  gap: 15px;
-  background: rgba(0,0,0,0.2);
-  padding: 10px;
-  border: 2px solid #2d5016;
+  gap: 10px;
 }
 
-.turn-box {
-  width: 50px;
-  height: 50px;
+.turn-icon {
+  width: 36px;
+  height: 36px;
   background: #2d5016;
-  border: 3px solid #1a1a1a;
+  border: 2px solid #1a1a1a;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 28px;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.5);
+  font-size: 20px;
+  flex-shrink: 0;
 }
 
 .header-text {
   color: white;
   text-shadow: 2px 2px 0 #000;
-  flex: 1;
+  overflow: hidden;
 }
 
 .header-text h1 {
-  font-size: 28px;
+  font-size: 20px;
+  line-height: 1;
   margin-bottom: 2px;
-  letter-spacing: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .header-text p {
-  font-size: 20px;
-  opacity: 0.9;
+  font-size: 14px;
   color: #c8e6c9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* SIDE BUTTONS - Minecraft knappar */
-.mc-side-panel {
+/* KOMPAKTA SIDOKNAPPAR */
+.mc-side-compact {
   position: fixed;
-  right: 15px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 8px;
+  top: 8px;
   z-index: 1000;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 8px;
 }
 
-.mc-btn {
-  width: 56px;
-  height: 56px;
+.mc-side-btn {
+  width: 44px;
+  height: 44px;
   background: #5d8c3a;
-  border: 4px solid #3d5c26;
-  border-bottom: 4px solid #2d5016;
-  box-shadow: 0 4px 0 #1a1a1a;
-  color: white;
-  font-size: 28px;
+  border: 3px solid #3d5c26;
+  border-bottom: 3px solid #2d5016;
+  box-shadow: 0 3px 0 #1a1a1a;
+  font-size: 20px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: all 0.1s;
-  text-shadow: 2px 2px 0 #000;
 }
 
-.mc-btn:active {
-  transform: translateY(4px);
+.mc-side-btn:active {
+  transform: translateY(3px);
   box-shadow: 0 0 0 #1a1a1a;
-  border-bottom: 4px solid #3d5c26;
 }
 
-/* LOCK BUTTON */
-.mc-lock-btn {
-  position: fixed;
-  right: 15px;
-  bottom: 200px;
-  width: 56px;
-  height: 56px;
+.mc-side-btn.muted {
   background: #8b7355;
-  border: 4px solid #6b5344;
-  border-bottom: 4px solid #4a3728;
-  box-shadow: 0 4px 0 #1a1a1a;
-  font-size: 28px;
-  cursor: pointer;
-  z-index: 1000;
-  text-shadow: 2px 2px 0 #000;
-  transition: all 0.1s;
+  opacity: 0.6;
 }
 
-.mc-lock-btn:active {
-  transform: translateY(4px);
-  box-shadow: 0 0 0 #1a1a1a;
-}
-
-.mc-lock-btn.locked {
-  background: #4a7c26;
-  border-color: #2d5016;
-  box-shadow: 0 0 15px rgba(93, 140, 58, 0.6);
-}
-
-/* BOTTOM SHEET - Minecraft inventory */
-.mc-bottom {
+/* KOMPAKT BOTTOM */
+.mc-bottom-compact {
   position: fixed;
-  bottom: 10px;
-  left: 10px;
-  right: 10px;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
   z-index: 1000;
-  background: #3d3d3d;
-  border: 4px solid #1a1a1a;
-  box-shadow: 0 6px 0 #000;
-  padding: 15px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
 }
 
-.mc-inventory {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 15px;
+.mc-stats {
+  display: flex;
+  gap: 6px;
+  flex: 1;
 }
 
-.mc-slot {
+.stat-box {
+  flex: 1;
   background: #8b8b8b;
   border: 3px solid #555;
   border-top: 3px solid #aaa;
   border-left: 3px solid #aaa;
-  padding: 12px;
+  padding: 6px;
   text-align: center;
   color: white;
   text-shadow: 2px 2px 0 #000;
-  box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+  box-shadow: 0 3px 0 #333;
 }
 
-.mc-time, .mc-value {
-  font-size: 36px;
-  font-weight: bold;
-  margin-bottom: 4px;
-  color: #fff;
-}
-
-.mc-label {
-  font-size: 18px;
-  color: #aaa;
-  letter-spacing: 2px;
-}
-
-/* Share button - Minecraft wood style */
-.mc-share-btn {
-  width: 100%;
-  padding: 15px;
-  background: #8b6914;
-  border: 4px solid #5c4a0d;
-  border-bottom: 4px solid #3d2f08;
-  box-shadow: 0 4px 0 #1a1a1a;
-  color: white;
-  font-family: 'VT323', monospace;
+.stat-box span {
   font-size: 24px;
-  cursor: pointer;
-  text-shadow: 2px 2px 0 #000;
-  transition: all 0.1s;
+  display: block;
+  line-height: 1;
+}
+
+.stat-box small {
+  font-size: 12px;
+  color: #ccc;
   letter-spacing: 1px;
 }
 
-.mc-share-btn:active {
-  transform: translateY(4px);
+.mc-share-compact {
+  background: #8b6914;
+  border: 3px solid #5c4a0d;
+  border-bottom: 3px solid #3d2f08;
+  box-shadow: 0 3px 0 #1a1a1a;
+  color: white;
+  font-family: 'VT323', monospace;
+  font-size: 16px;
+  padding: 0 16px;
+  height: 52px;
+  cursor: pointer;
+  text-shadow: 2px 2px 0 #000;
+  white-space: nowrap;
+}
+
+.mc-share-compact:active {
+  transform: translateY(3px);
   box-shadow: 0 0 0 #1a1a1a;
-  border-bottom: 4px solid #5c4a0d;
 }
 
-/* Routing line - Minecraft path */
-.leaflet-routing-line {
-  stroke: #4caf50 !important;
-  stroke-width: 6;
-  stroke-dasharray: 8, 4;
-  filter: drop-shadow(0 2px 0 rgba(0,0,0,0.5));
-}
-
-/* Player marker */
+/* Markörer */
 .player-marker img {
   filter: drop-shadow(2px 2px 0 #000);
 }
 
-/* Hide controls */
-.leaflet-control-container {
-  display: none;
-}
-
-/* Selection marker */
-.destination-marker {
-  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
+/* Routing-linje */
+.leaflet-routing-line {
+  stroke: #4caf50 !important;
+  stroke-width: 6;
+  stroke-dasharray: 8, 4;
 }
