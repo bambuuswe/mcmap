@@ -12,25 +12,15 @@ html, body {
   background: #3d5c26;
 }
 
-/* VIKTIGT: Kartan måste vara STÖRRE än skärmen för att rotation ska fungera */
 #map {
   position: fixed !important;
-  /* Gör kartan 50% större än skärmen så kanterna aldrig syns vid rotation */
   width: 150vmax !important;
   height: 150vmax !important;
-  /* Centrera kartan */
   top: 50% !important;
   left: 50% !important;
   transform: translate(-50%, -50%);
   transform-origin: center center;
   z-index: 0 !important;
-  /* Dölj allt utanför viewport */
-  clip-path: none;
-}
-
-/* När kartan roterar */
-#map.rotating {
-  /* Ingen transition för snabbare respons */
 }
 
 .leaflet-tile {
@@ -50,19 +40,87 @@ html, body {
   display: none !important;
 }
 
-/* Lager som döljer kanterna - en "mask" över allt */
-body::before {
-  content: "";
+/* SÖKFÄLT - Minecraft stil */
+.mc-search-container {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1;
-  pointer-events: none;
-  /* Skapa en rund mask i mitten, svart runtom */
-  background: radial-gradient(circle at center, transparent 60%, #3d5c26 100%);
-  opacity: 0;
+  top: 70px;
+  left: 8px;
+  right: 70px;
+  z-index: 1001;
+}
+
+.mc-search-box {
+  display: flex;
+  background: #8b8b8b;
+  border: 3px solid #555;
+  border-top: 3px solid #aaa;
+  border-left: 3px solid #aaa;
+  box-shadow: 0 4px 0 #333;
+}
+
+.mc-search-box input {
+  flex: 1;
+  background: #c0c0c0;
+  border: none;
+  padding: 12px;
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  color: #000;
+  outline: none;
+}
+
+.mc-search-box input::placeholder {
+  color: #666;
+}
+
+.mc-search-box button {
+  width: 50px;
+  background: #5d8c3a;
+  border: 3px solid #3d5c26;
+  border-bottom: 3px solid #2d5016;
+  font-size: 22px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mc-search-box button:active {
+  background: #4a7c26;
+}
+
+/* Sökresultat */
+.mc-search-results {
+  background: #8b8b8b;
+  border: 3px solid #555;
+  border-top: none;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 0 #333;
+  display: none;
+}
+
+.mc-search-results.active {
+  display: block;
+}
+
+.search-result-item {
+  padding: 10px 12px;
+  border-bottom: 2px solid #666;
+  cursor: pointer;
+  color: #000;
+  font-size: 18px;
+  text-shadow: none;
+  transition: background 0.1s;
+}
+
+.search-result-item:hover {
+  background: #9b9b9b;
+}
+
+.search-result-item:active {
+  background: #5d8c3a;
+  color: white;
 }
 
 /* HEADER */
@@ -154,7 +212,7 @@ body::before {
   opacity: 0.6;
 }
 
-/* MITTEN-KNAPPAR */
+/* LÅS + KOMPASS */
 .mc-center-controls {
   position: fixed;
   right: 8px;
