@@ -12,35 +12,57 @@ html, body {
   background: #3d5c26;
 }
 
-/* KARTAN - viktigt för rotation */
+/* VIKTIGT: Kartan måste vara STÖRRE än skärmen för att rotation ska fungera */
 #map {
   position: fixed !important;
-  top: 0;
-  left: 0;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 0 !important;
+  /* Gör kartan 50% större än skärmen så kanterna aldrig syns vid rotation */
+  width: 150vmax !important;
+  height: 150vmax !important;
+  /* Centrera kartan */
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%);
   transform-origin: center center;
-  transition: transform 0.1s ease-out;
+  z-index: 0 !important;
+  /* Dölj allt utanför viewport */
+  clip-path: none;
 }
 
 /* När kartan roterar */
 #map.rotating {
-  transition: none; /* Snabbare respons */
+  /* Ingen transition för snabbare respons */
 }
 
 .leaflet-tile {
   image-rendering: pixelated !important;
+  image-rendering: crisp-edges !important;
   transform: scale(1.3);
   filter: contrast(1.5) saturate(1.2) brightness(0.95);
 }
 
 .leaflet-container {
   background: #3d5c26 !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 
 .leaflet-control-container {
   display: none !important;
+}
+
+/* Lager som döljer kanterna - en "mask" över allt */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* Skapa en rund mask i mitten, svart runtom */
+  background: radial-gradient(circle at center, transparent 60%, #3d5c26 100%);
+  opacity: 0;
 }
 
 /* HEADER */
