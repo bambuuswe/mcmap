@@ -15,7 +15,8 @@ let destinationMarker = null;
 let routingControl = null;
 let lastInstruction = "";
 let ttsEnabled = true;
-let isLocked = true; // Startar låst!
+let isLocked = false; // Kartan följer spelaren
+let isCompassLocked = false; // Rotation låst (kartan roterar inte)
 
 // UI
 const els = {
@@ -25,7 +26,9 @@ const els = {
   etaMin: document.getElementById('eta-min'),
   etaKm: document.getElementById('eta-km'),
   soundBtn: document.getElementById('sound-btn'),
-  lockBtn: document.getElementById('lock-btn')
+  lockBtn: document.getElementById('lock-btn'),
+  compassBtn: document.getElementById('compass-btn'),
+  turnIcon: document.getElementById('turn-icon')
 };
 
 // TTS
@@ -34,7 +37,6 @@ function speak(text) {
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text);
   utterance.lang = 'sv-SE';
-  utterance.rate = 1.0;
   window.speechSynthesis.speak(utterance);
   lastInstruction = text;
 }
@@ -42,14 +44,16 @@ function speak(text) {
 // Spelar-ikon
 const playerIcon = L.divIcon({
   className: 'player-marker',
-  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;">',
+  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;transition:transform 0.2s;">',
   iconSize: [32, 32],
   iconAnchor: [16, 16]
 });
 
 const player = L.marker([0, 0], { icon: playerIcon, zIndexOffset: 1000 }).addTo(map);
 
-// Kompass
+// KOMPASS / ROTATION
+let currentHeading = 0;
+
 async function requestOrientation() {
   if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
     try {
@@ -64,16 +68,31 @@ async function requestOrientation() {
 function enableOrientation() {
   window.addEventListener('deviceorientation', (e) => {
     let heading = e.webkitCompassHeading || (360 - e.alpha);
-    if (heading !== null) {
-      const img = document.getElementById('player-img');
-      if (img) img.style.transform = `rotate(${heading}deg)`;
+    if (heading !== null && !isNaN(heading)) {
+      currentHeading = heading;
+      updateRotation();
     }
   });
 }
 
+function updateRotation() {
+  const img = document.getElementById('player-img');
+  if (!img) return;
+  
+  if (isCompassLocked) {
+    // Kartan roterar, spelaren pekar alltid uppåt
+    img.style.transform = `rotate(0deg)`;
+    map.setBearing(currentHeading);
+  } else {
+    // Spelaren roterar, kartan är stilla
+    img.style.transform = `rotate(${currentHeading}deg)`;
+    map.setBearing(0);
+  }
+}
+
 document.addEventListener('click', requestOrientation, { once: true });
 
-// LÅSKNAPP
+// LÅSKNAPP (följa spelaren)
 els.lockBtn.addEventListener('click', () => {
   isLocked = !isLocked;
   els.lockBtn.textContent = isLocked ? '🔒' : '🔓';
@@ -81,10 +100,28 @@ els.lockBtn.addEventListener('click', () => {
   
   if (isLocked && currentPos[0] !== 0) {
     map.setView(currentPos, 17);
-    speak("Kartan låst");
+    speak("Kartan låst på position");
   } else {
     speak("Kartan upplåst");
   }
+});
+
+// KOMPASSKNAPP (lås rotation)
+els.compassBtn.addEventListener('click', () => {
+  isCompassLocked = !isCompassLocked;
+  els.compassBtn.classList.toggle('locked', isCompassLocked);
+  
+  if (isCompassLocked) {
+    els.compassBtn.textContent = '🧭';
+    els.turnIcon.textContent = '⬆️'; // Pilen pekar alltid upp
+    speak("Rotation låst. Kartan roterar.");
+  } else {
+    els.compassBtn.textContent = '🧭';
+    els.turnIcon.textContent = '➡️'; // Pilen roterar med mobilen
+    speak("Rotation upplåst. Spelaren roterar.");
+  }
+  
+  updateRotation();
 });
 
 // ÖVRIGA KNAPPAR
@@ -93,19 +130,19 @@ els.soundBtn.addEventListener('click', () => {
   els.soundBtn.textContent = ttsEnabled ? '🔊' : '🔇';
   els.soundBtn.classList.toggle('muted', !ttsEnabled);
   if (!ttsEnabled) window.speechSynthesis.cancel();
-  else speak(ttsEnabled ? "Ljud på" : "Ljud av");
 });
 
 document.getElementById('layers-btn').addEventListener('click', () => {
+  // Toggle kartlager
+  let hasTopo = false;
   map.eachLayer((layer) => {
-    if (layer instanceof L.TileLayer) map.removeLayer(layer);
+    if (layer instanceof L.TileLayer) {
+      hasTopo = layer._url.includes('opentopomap');
+      map.removeLayer(layer);
+    }
   });
   
-  // Toggle mellan topo och satellit
-  const currentLayer = Object.values(map._layers).find(l => l instanceof L.TileLayer);
-  const isTopo = currentLayer && currentLayer._url.includes('opentopomap');
-  
-  L.tileLayer(isTopo ? 
+  L.tileLayer(hasTopo ? 
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}" :
     "https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",
     { maxZoom: 19 }
@@ -126,7 +163,6 @@ document.getElementById('cancel-btn').addEventListener('click', () => {
   els.etaTime.textContent = "--:--";
   els.etaMin.textContent = "--";
   els.etaKm.textContent = "--";
-  window.speechSynthesis.cancel();
   speak("Navigering avbruten");
 });
 
@@ -142,7 +178,7 @@ document.getElementById('share-btn').addEventListener('click', () => {
 // Sätt mål
 map.on('click', (e) => {
   if (isLocked) {
-    // Skaka knappen för att visa att den är låst
+    // Skaka låsknappen
     els.lockBtn.style.animation = 'shake 0.3s';
     setTimeout(() => els.lockBtn.style.animation = '', 300);
     speak("Lås upp kartan först");
@@ -166,9 +202,6 @@ map.on('click', (e) => {
   
   if (currentPos[0] !== 0) {
     calculateRoute(currentPos, [lat, lng]);
-  } else {
-    els.instruction.textContent = "Väntar på GPS...";
-    speak("Väntar på GPS-signal");
   }
 });
 
@@ -195,13 +228,10 @@ function calculateRoute(from, to) {
     els.etaMin.textContent = Math.round(summary.totalTime / 60);
     els.etaKm.textContent = (summary.totalDistance / 1000).toFixed(1);
     
-    const instruction = "Sväng höger om 100 meter";
-    const street = "Mot destinationen";
+    els.instruction.textContent = "Sväng höger om 100 meter";
+    els.street.textContent = "Mot destinationen";
     
-    els.instruction.textContent = instruction;
-    els.street.textContent = street;
-    
-    speak(`${instruction}. ${Math.round(summary.totalTime / 60)} minuter kvar.`);
+    speak(`Sväng höger om 100 meter. ${Math.round(summary.totalTime / 60)} minuter kvar.`);
   });
 }
 
@@ -213,7 +243,6 @@ navigator.geolocation.watchPosition(
     currentPos = [lat, lon];
     player.setLatLng([lat, lon]);
     
-    // Om låst, följ spelaren!
     if (isLocked) {
       map.setView([lat, lon], 17);
     }
@@ -231,12 +260,9 @@ navigator.geolocation.watchPosition(
 const style = document.createElement('style');
 style.textContent = `
   @keyframes shake {
-    0%, 100% { transform: translateY(-50%) rotate(0deg); }
-    25% { transform: translateY(-50%) rotate(-5deg); }
-    75% { transform: translateY(-50%) rotate(5deg); }
+    0%, 100% { transform: translateY(0); }
+    25% { transform: translateY(-5px) rotate(-5deg); }
+    75% { transform: translateY(-5px) rotate(5deg); }
   }
 `;
 document.head.appendChild(style);
-
-// Init
-els.lockBtn.classList.add('locked');
