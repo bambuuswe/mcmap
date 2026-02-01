@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -21,34 +22,25 @@
     </div>
   </div>
 
-  <!-- SIDOKNAPPAR (övre) -->
+  <!-- SIDOKNAPPAR -->
   <div class="mc-side-compact">
-    <button class="mc-side-btn" id="layers-btn" title="Kartlager">🗺️</button>
-    <button class="mc-side-btn" id="sound-btn" title="Ljud på/av">🔊</button>
-    <button class="mc-side-btn" id="cancel-btn" title="Avbryt">❌</button>
+    <button class="mc-side-btn" id="layers-btn">🗺️</button>
+    <button class="mc-side-btn" id="sound-btn">🔊</button>
+    <button class="mc-side-btn" id="cancel-btn">❌</button>
   </div>
 
-  <!-- Mitten-knappar (LÅS + KOMPASS) -->
+  <!-- Mitten-knappar -->
   <div class="mc-center-controls">
-    <button class="mc-lock-btn" id="lock-btn" title="Lås karta">🔓</button>
-    <button class="mc-compass-btn" id="compass-btn" title="Lås rotation">🧭</button>
+    <button class="mc-lock-btn" id="lock-btn">🔓</button>
+    <button class="mc-compass-btn" id="compass-btn">🧭</button>
   </div>
 
   <!-- BOTTOM -->
   <div class="mc-bottom-compact">
     <div class="mc-stats">
-      <div class="stat-box">
-        <span id="eta-time">--:--</span>
-        <small>ANK</small>
-      </div>
-      <div class="stat-box">
-        <span id="eta-min">--</span>
-        <small>MIN</small>
-      </div>
-      <div class="stat-box">
-        <span id="eta-km">--</span>
-        <small>KM</small>
-      </div>
+      <div class="stat-box"><span id="eta-time">--:--</span><small>ANK</small></div>
+      <div class="stat-box"><span id="eta-min">--</span><small>MIN</small></div>
+      <div class="stat-box"><span id="eta-km">--</span><small>KM</small></div>
     </div>
     <button class="mc-share-compact" id="share-btn">💬 DELA</button>
   </div>
