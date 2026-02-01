@@ -36,7 +36,7 @@ html, body {
   display: none !important;
 }
 
-/* KOMPAKT HEADER */
+/* HEADER */
 .mc-header-compact {
   position: fixed;
   top: 8px;
@@ -88,7 +88,7 @@ html, body {
   text-overflow: ellipsis;
 }
 
-/* KOMPAKTA SIDOKNAPPAR */
+/* SIDOKNAPPAR (höger sida, övre) */
 .mc-side-compact {
   position: fixed;
   right: 8px;
@@ -124,7 +124,39 @@ html, body {
   opacity: 0.6;
 }
 
-/* KOMPAKT BOTTOM */
+/* LÅSKNAPP (höger sida, mitten) */
+.mc-lock-btn {
+  position: fixed;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  background: #8b6914;
+  border: 3px solid #5c4a0d;
+  border-bottom: 3px solid #3d2f08;
+  box-shadow: 0 4px 0 #1a1a1a;
+  font-size: 24px;
+  cursor: pointer;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.1s;
+}
+
+.mc-lock-btn:active {
+  transform: translateY(calc(-50% + 4px));
+  box-shadow: 0 0 0 #1a1a1a;
+}
+
+.mc-lock-btn.locked {
+  background: #4a7c26;
+  border-color: #2d5016;
+  box-shadow: 0 0 15px rgba(74, 124, 38, 0.6), 0 4px 0 #1a1a1a;
+}
+
+/* BOTTOM */
 .mc-bottom-compact {
   position: fixed;
   bottom: 8px;
@@ -192,7 +224,6 @@ html, body {
   filter: drop-shadow(2px 2px 0 #000);
 }
 
-/* Routing-linje */
 .leaflet-routing-line {
   stroke: #4caf50 !important;
   stroke-width: 6;
