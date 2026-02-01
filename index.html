@@ -14,22 +14,25 @@
 
   <!-- HEADER -->
   <div class="mc-header-compact">
-    <div class="turn-icon">➡️</div>
+    <div class="turn-icon" id="turn-icon">➡️</div>
     <div class="header-text">
       <h1 id="instruction">Börja på Norrga Kvarn</h1>
       <p id="street">Sök efter destination</p>
     </div>
   </div>
 
-  <!-- SIDOKNAPPAR -->
+  <!-- SIDOKNAPPAR (övre) -->
   <div class="mc-side-compact">
     <button class="mc-side-btn" id="layers-btn" title="Kartlager">🗺️</button>
     <button class="mc-side-btn" id="sound-btn" title="Ljud på/av">🔊</button>
     <button class="mc-side-btn" id="cancel-btn" title="Avbryt">❌</button>
   </div>
 
-  <!-- LÅSKNAPP (centrerad på höger sida) -->
-  <button class="mc-lock-btn" id="lock-btn" title="Lås upp/lås">🔓</button>
+  <!-- Mitten-knappar (LÅS + KOMPASS) -->
+  <div class="mc-center-controls">
+    <button class="mc-lock-btn" id="lock-btn" title="Lås karta">🔓</button>
+    <button class="mc-compass-btn" id="compass-btn" title="Lås rotation">🧭</button>
+  </div>
 
   <!-- BOTTOM -->
   <div class="mc-bottom-compact">
