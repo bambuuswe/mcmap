@@ -1,7 +1,8 @@
 html, body {
   margin: 0;
+  padding: 0;
   height: 100%;
-  background: #1a1a1a;
+  background: #3b5f2a;
 }
 
 #map {
@@ -9,16 +10,23 @@ html, body {
   height: 100%;
 }
 
-/* EXTREMT pixeligt */
+/* HÅRD pixel-art */
 .leaflet-tile {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
+  transform: scale(1.35);
   filter:
-    saturate(1.3)
-    contrast(1.1);
+    saturate(1.7)
+    contrast(1.3)
+    brightness(0.95);
 }
 
-/* Blockigt UI */
+/* ta bort blur */
 .leaflet-container {
-  background: #3b5f2a;
+  background: #4b7a3c;
+}
+
+/* ingen UI */
+.leaflet-control-container {
+  display: none;
 }
