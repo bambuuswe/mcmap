@@ -15,8 +15,8 @@ let destinationMarker = null;
 let routingControl = null;
 let lastInstruction = "";
 let ttsEnabled = true;
-let isLocked = false; // Kartan följer spelaren
-let isCompassLocked = false; // Rotation låst (kartan roterar inte)
+let isLocked = false; // Följa spelarens position
+let isCompassLocked = false; // Kartan roterar med mobilen
 
 // UI
 const els = {
@@ -44,7 +44,7 @@ function speak(text) {
 // Spelar-ikon
 const playerIcon = L.divIcon({
   className: 'player-marker',
-  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;transition:transform 0.2s;">',
+  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;transition:transform 0.1s;">',
   iconSize: [32, 32],
   iconAnchor: [16, 16]
 });
@@ -53,6 +53,7 @@ const player = L.marker([0, 0], { icon: playerIcon, zIndexOffset: 1000 }).addTo(
 
 // KOMPASS / ROTATION
 let currentHeading = 0;
+let deviceOrientationEnabled = false;
 
 async function requestOrientation() {
   if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
@@ -66,33 +67,41 @@ async function requestOrientation() {
 }
 
 function enableOrientation() {
+  if (deviceOrientationEnabled) return;
+  deviceOrientationEnabled = true;
+  
   window.addEventListener('deviceorientation', (e) => {
     let heading = e.webkitCompassHeading || (360 - e.alpha);
     if (heading !== null && !isNaN(heading)) {
       currentHeading = heading;
-      updateRotation();
+      updateMapRotation();
     }
   });
 }
 
-function updateRotation() {
+function updateMapRotation() {
   const img = document.getElementById('player-img');
   if (!img) return;
   
   if (isCompassLocked) {
-    // Kartan roterar, spelaren pekar alltid uppåt
-    img.style.transform = `rotate(0deg)`;
+    // KARTAN ROTERAR - spelaren pekar alltid uppåt!
+    // Rotera kartan så att "framåt" (heading) pekar uppåt
     map.setBearing(currentHeading);
+    // Spelar-ikonen pekar alltid upp (0 grader)
+    img.style.transform = `rotate(0deg)`;
+    // Uppdatera turn-ikonen också
+    els.turnIcon.style.transform = `rotate(0deg)`;
   } else {
-    // Spelaren roterar, kartan är stilla
-    img.style.transform = `rotate(${currentHeading}deg)`;
+    // KARTAN ÄR STILL - spelaren roterar
     map.setBearing(0);
+    img.style.transform = `rotate(${currentHeading}deg)`;
+    els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
   }
 }
 
 document.addEventListener('click', requestOrientation, { once: true });
 
-// LÅSKNAPP (följa spelaren)
+// LÅSKNAPP (följa spelarens position)
 els.lockBtn.addEventListener('click', () => {
   isLocked = !isLocked;
   els.lockBtn.textContent = isLocked ? '🔒' : '🔓';
@@ -106,22 +115,25 @@ els.lockBtn.addEventListener('click', () => {
   }
 });
 
-// KOMPASSKNAPP (lås rotation)
+// KOMPASSKNAPP (lås kartan till mobilens rotation)
 els.compassBtn.addEventListener('click', () => {
   isCompassLocked = !isCompassLocked;
   els.compassBtn.classList.toggle('locked', isCompassLocked);
   
   if (isCompassLocked) {
-    els.compassBtn.textContent = '🧭';
-    els.turnIcon.textContent = '⬆️'; // Pilen pekar alltid upp
-    speak("Rotation låst. Kartan roterar.");
+    // Aktivera kompass-läge
+    speak("Kompass låst. Kartan roterar med mobilen.");
+    // Se till att orientation är aktiv
+    if (!deviceOrientationEnabled) {
+      requestOrientation();
+    }
   } else {
-    els.compassBtn.textContent = '🧭';
-    els.turnIcon.textContent = '➡️'; // Pilen roterar med mobilen
-    speak("Rotation upplåst. Spelaren roterar.");
+    speak("Kompass upplåst.");
+    // Återställ kartan
+    map.setBearing(0);
   }
   
-  updateRotation();
+  updateMapRotation();
 });
 
 // ÖVRIGA KNAPPAR
@@ -133,7 +145,6 @@ els.soundBtn.addEventListener('click', () => {
 });
 
 document.getElementById('layers-btn').addEventListener('click', () => {
-  // Toggle kartlager
   let hasTopo = false;
   map.eachLayer((layer) => {
     if (layer instanceof L.TileLayer) {
@@ -178,7 +189,6 @@ document.getElementById('share-btn').addEventListener('click', () => {
 // Sätt mål
 map.on('click', (e) => {
   if (isLocked) {
-    // Skaka låsknappen
     els.lockBtn.style.animation = 'shake 0.3s';
     setTimeout(() => els.lockBtn.style.animation = '', 300);
     speak("Lås upp kartan först");
