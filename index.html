@@ -13,6 +13,15 @@
 <body>
   <div id="map"></div>
 
+  <!-- SÖKFÄLT -->
+  <div class="mc-search-container">
+    <div class="mc-search-box">
+      <input type="text" id="search-input" placeholder="Sök adress eller plats..." autocomplete="off">
+      <button id="search-btn">🔍</button>
+    </div>
+    <div id="search-results" class="mc-search-results"></div>
+  </div>
+
   <!-- HEADER -->
   <div class="mc-header-compact">
     <div class="turn-icon" id="turn-icon">➡️</div>
@@ -29,7 +38,7 @@
     <button class="mc-side-btn" id="cancel-btn">❌</button>
   </div>
 
-  <!-- Mitten-knappar -->
+  <!-- LÅS + KOMPASS -->
   <div class="mc-center-controls">
     <button class="mc-lock-btn" id="lock-btn">🔓</button>
     <button class="mc-compass-btn" id="compass-btn">🧭</button>
