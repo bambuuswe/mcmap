@@ -15,8 +15,8 @@ let destinationMarker = null;
 let routingControl = null;
 let lastInstruction = "";
 let ttsEnabled = true;
-let isLocked = false; // Följa spelarens position
-let isCompassLocked = false; // Kartan roterar med mobilen
+let isLocked = false;
+let isCompassLocked = false;
 
 // UI
 const els = {
@@ -28,7 +28,8 @@ const els = {
   soundBtn: document.getElementById('sound-btn'),
   lockBtn: document.getElementById('lock-btn'),
   compassBtn: document.getElementById('compass-btn'),
-  turnIcon: document.getElementById('turn-icon')
+  turnIcon: document.getElementById('turn-icon'),
+  map: document.getElementById('map')
 };
 
 // TTS
@@ -44,14 +45,14 @@ function speak(text) {
 // Spelar-ikon
 const playerIcon = L.divIcon({
   className: 'player-marker',
-  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;transition:transform 0.1s;">',
+  html: '<img src="player.png" id="player-img" style="width:32px;height:32px;transform-origin:center;">',
   iconSize: [32, 32],
   iconAnchor: [16, 16]
 });
 
 const player = L.marker([0, 0], { icon: playerIcon, zIndexOffset: 1000 }).addTo(map);
 
-// KOMPASS / ROTATION
+// KOMPASS / ROTATION - VIKTIGT!
 let currentHeading = 0;
 let deviceOrientationEnabled = false;
 
@@ -59,11 +60,18 @@ async function requestOrientation() {
   if (typeof DeviceOrientationEvent?.requestPermission === 'function') {
     try {
       const permission = await DeviceOrientationEvent.requestPermission();
-      if (permission === 'granted') enableOrientation();
-    } catch (e) {}
+      if (permission === 'granted') {
+        enableOrientation();
+        return true;
+      }
+    } catch (e) {
+      console.error(e);
+    }
   } else {
     enableOrientation();
+    return true;
   }
+  return false;
 }
 
 function enableOrientation() {
@@ -71,35 +79,67 @@ function enableOrientation() {
   deviceOrientationEnabled = true;
   
   window.addEventListener('deviceorientation', (e) => {
-    let heading = e.webkitCompassHeading || (360 - e.alpha);
+    // iOS använder webkitCompassHeading, Android använder alpha
+    let heading = null;
+    
+    if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+      // iOS
+      heading = e.webkitCompassHeading;
+    } else if (e.alpha !== null) {
+      // Android - konvertera alpha till kompassriktning
+      heading = 360 - e.alpha;
+    }
+    
     if (heading !== null && !isNaN(heading)) {
-      currentHeading = heading;
-      updateMapRotation();
+      // Normalisera till 0-360
+      currentHeading = (heading + 360) % 360;
+      updateRotation();
     }
   });
 }
 
-function updateMapRotation() {
+function updateRotation() {
   const img = document.getElementById('player-img');
-  if (!img) return;
   
   if (isCompassLocked) {
-    // KARTAN ROTERAR - spelaren pekar alltid uppåt!
-    // Rotera kartan så att "framåt" (heading) pekar uppåt
-    map.setBearing(currentHeading);
-    // Spelar-ikonen pekar alltid upp (0 grader)
-    img.style.transform = `rotate(0deg)`;
-    // Uppdatera turn-ikonen också
+    // KARTAN ROTERAR - använd CSS transform på kart-containern
+    // Rotera kartan så att norr pekar uppåt (heading = uppåt)
+    els.map.style.transform = `rotate(${-currentHeading}deg)`;
+    
+    // Spelaren pekar alltid uppåt (rakt upp på skärmen)
+    if (img) img.style.transform = `rotate(0deg)`;
+    
+    // Turn-ikonen pekar också uppåt
     els.turnIcon.style.transform = `rotate(0deg)`;
+    
+    // Markörer måste roteras motriktat för att peka rätt
+    document.querySelectorAll('.destination-marker').forEach(marker => {
+      marker.style.transform = `rotate(${currentHeading}deg)`;
+    });
+    
   } else {
-    // KARTAN ÄR STILL - spelaren roterar
-    map.setBearing(0);
-    img.style.transform = `rotate(${currentHeading}deg)`;
+    // KARTAN ÄR STILL - vanligt läge
+    els.map.style.transform = `rotate(0deg)`;
+    
+    // Spelaren roterar med mobilen
+    if (img) img.style.transform = `rotate(${currentHeading}deg)`;
+    
+    // Turn-ikonen roterar också
     els.turnIcon.style.transform = `rotate(${currentHeading}deg)`;
+    
+    // Återställ markörer
+    document.querySelectorAll('.destination-marker').forEach(marker => {
+      marker.style.transform = `rotate(0deg)`;
+    });
   }
 }
 
-document.addEventListener('click', requestOrientation, { once: true });
+// Klicka för att aktivera orientation (krävs på iOS)
+document.addEventListener('click', () => {
+  if (!deviceOrientationEnabled) {
+    requestOrientation();
+  }
+}, { once: true });
 
 // LÅSKNAPP (följa spelarens position)
 els.lockBtn.addEventListener('click', () => {
@@ -115,25 +155,31 @@ els.lockBtn.addEventListener('click', () => {
   }
 });
 
-// KOMPASSKNAPP (lås kartan till mobilens rotation)
-els.compassBtn.addEventListener('click', () => {
+// KOMPASSKNAPP (lås rotation)
+els.compassBtn.addEventListener('click', async () => {
+  // Se till att orientation är aktiverad först
+  if (!deviceOrientationEnabled) {
+    const granted = await requestOrientation();
+    if (!granted) {
+      speak("Tillåt åtkomst till kompassen");
+      return;
+    }
+  }
+  
   isCompassLocked = !isCompassLocked;
   els.compassBtn.classList.toggle('locked', isCompassLocked);
   
   if (isCompassLocked) {
-    // Aktivera kompass-läge
-    speak("Kompass låst. Kartan roterar med mobilen.");
-    // Se till att orientation är aktiv
-    if (!deviceOrientationEnabled) {
-      requestOrientation();
-    }
+    speak("Kompass låst. Kartan roterar.");
+    els.map.classList.add('rotating');
   } else {
     speak("Kompass upplåst.");
-    // Återställ kartan
-    map.setBearing(0);
+    els.map.classList.remove('rotating');
+    // Återställ rotation
+    els.map.style.transform = `rotate(0deg)`;
   }
   
-  updateMapRotation();
+  updateRotation();
 });
 
 // ÖVRIGA KNAPPAR
