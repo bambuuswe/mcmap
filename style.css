@@ -1,18 +1,72 @@
-#map {
-  height: 100vh;
-  width: 100%;
-  background: #5d8c3a; /* Minecraft-gräs-färg som fallback */
-  image-rendering: pixelated; /* Gör allt pixeligt! */
-  image-rendering: crisp-edges;
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #3b5f2a;
+  font-family: 'Courier New', monospace; /* Pixel-font */
 }
 
-/* Pixelera kartbilderna */
+#map {
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+/* EXTREM block-making av växtlighet - gör om till Minecraft-blocks! */
 .leaflet-tile {
   image-rendering: pixelated !important;
   image-rendering: crisp-edges !important;
+  transform: scale(1.4);
+  filter: 
+    contrast(2.5)        /* Gör kanter hårdare */
+    saturate(2.0)        /* Super-grönt! */
+    brightness(1.0)
+    sepia(0.2)           /* Liten grön/brun ton för mark */
+    hue-rotate(-10deg);  /* Shifta mot mer grönt */
 }
 
-/* För mobilen - se till att inget är suddigt */
-* {
+/* Bakgrundsfärg mellan tiles */
+.leaflet-container {
+  background: #567d46 !important; /* Minecraft grass-block grön */
+}
+
+/* Dölj Leaflet-kontroller */
+.leaflet-control-container {
+  display: none;
+}
+
+/* Men visa vår egna routing-panel (om vi vill ha instruktioner synliga) */
+.leaflet-routing-container {
+  display: none; /* Döljer den fula standard-panelen, vi gör egen */
+}
+
+/* Info-ruta */
+#route-info {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  padding: 12px 20px;
+  border: 3px solid #4a7c26;
+  border-radius: 4px;
+  font-weight: bold;
+  z-index: 1000;
+  font-family: 'Courier New', monospace;
+  text-shadow: 2px 2px 0 #000;
+  box-shadow: 0 4px 0 #2d5016;
+  pointer-events: none;
+}
+
+/* Pin-ikon när man sätter ut mål */
+.destination-icon {
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
   image-rendering: pixelated;
+}
+
+/* Spelar-ikonen */
+.player-icon-img {
+  image-rendering: pixelated;
+  filter: drop-shadow(2px 2px 0 rgba(0,0,0,0.5));
 }
